@@ -13,7 +13,7 @@ st.title("VISION")
 st.text("This app detects if a person is real or fake using YOLOv8")
 
 # Load YOLO model
-model_path = "D:/Projects/LiveGuard/best.onnx"
+model_path = "best.onnx"
 model = YOLO(model_path)
 classNames = ["fake", "real"]
 
