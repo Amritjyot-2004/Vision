@@ -14,7 +14,7 @@ st.text("This app detects if a person is real or fake using YOLOv8")
 
 # Load YOLO model
 model_path = "best.onnx"
-model = YOLO(model_path)
+model = YOLO(model_path, task="detect")
 classNames = ["fake", "real"]
 
 # Confidence slider
