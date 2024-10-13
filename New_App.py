@@ -83,7 +83,7 @@ class VideoTransformer(VideoTransformerBase):
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
 # Use streamlit-webrtc for webcam access
-webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
+webrtc_streamer(key="example", video_processor_factory=VideoTransformer)
 
 # Display lighting condition
 st.sidebar.title("Lighting and Confidence Settings")
