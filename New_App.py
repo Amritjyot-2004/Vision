@@ -1,7 +1,6 @@
 import streamlit as st
 from ultralytics import YOLO
 import cv2
-import cvzone
 import math
 import numpy as np
 import time
@@ -12,7 +11,7 @@ st.text("Real-time detection: Detecting if a person is real or fake using YOLOv8
 
 # Load YOLO model
 model_path = "best.pt"  # Adjust to the correct path if needed
-model = YOLO(model_path, task = "detect")
+model = YOLO(model_path, task="detect")
 classNames = ["fake", "real"]
 
 # Confidence slider
@@ -54,13 +53,21 @@ def process_frame(img, confidence_threshold, lighting_threshold):
                 conf = math.ceil((box.conf[0] * 100)) / 100
                 cls = int(box.cls[0])
 
-                # Draw the bounding boxes and text
+                # Draw bounding boxes and text using OpenCV
                 if conf > confidence_threshold:
                     color = (0, 255, 0) if classNames[cls] == 'real' else (0, 0, 255)
-                    cvzone.cornerRect(img, (x1, y1, w, h), colorC=color, colorR=color)
-                    cvzone.putTextRect(img, f'{classNames[cls].upper()} {int(conf * 100)}%',
-                                       (max(0, x1), max(35, y1)), scale=2, thickness=4, colorR=color,
-                                       colorB=color)
+                    # Draw rectangle (bounding box)
+                    cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+                    
+                    # Draw label with confidence
+                    label = f'{classNames[cls].upper()} {int(conf * 100)}%'
+                    label_size, _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+                    label_ymin = max(y1, label_size[1] + 10)
+                    cv2.rectangle(img, (x1, label_ymin - label_size[1] - 10), 
+                                  (x1 + label_size[0], label_ymin + 5), color, cv2.FILLED)
+                    cv2.putText(img, label, (x1, label_ymin - 7), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
                     res = classNames[cls].upper()
 
                     # Update alert state based on detection result
