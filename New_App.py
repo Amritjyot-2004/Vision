@@ -4,21 +4,26 @@ import cv2
 import cvzone
 import math
 import numpy as np
+import time
 
 # Streamlit settings
 st.title("VISION")
-st.text("This app detects if a person is real or fake using YOLOv8")
+st.text("Real-time detection: Detecting if a person is real or fake using YOLOv8")
 
 # Load YOLO model
-model_path = "best.onnx"
-model = YOLO(model_path, task="detect")
+model_path = "best.pt"  # Adjust to the correct path if needed
+model = YOLO(model_path, task = "detect")
 classNames = ["fake", "real"]
 
 # Confidence slider
-confidence_threshold = 0.8
+confidence_threshold = st.slider("Confidence threshold", min_value=0.0, max_value=1.0, value=0.8)
 
 # Lighting threshold slider
-lighting_threshold = 50
+lighting_threshold = st.slider("Lighting threshold", min_value=0, max_value=100, value=50)
+
+# Placeholder for video frame
+stframe = st.empty()  # Placeholder for video frames
+alert_placeholder = st.empty()  # Placeholder for alert message
 
 # Function to check lighting
 def check_lighting(frame, threshold=30):
@@ -26,31 +31,20 @@ def check_lighting(frame, threshold=30):
     brightness = np.mean(gray_frame)  # Calculate average brightness
     return brightness > threshold
 
-# Initialize the alert state and create a placeholder
-alert_state = False
-alert_placeholder = st.empty()  # Placeholder for the alert message
-
-# Stream video and run YOLO model using st.camera_input()
-stframe = st.empty()  # Placeholder for video frames
-
-# Get input from camera
-camera_input = st.camera_input("Take a picture or a live stream")
-
-if camera_input:
-    # Read the image as a numpy array for OpenCV
-    bytes_data = camera_input.getvalue()
-    img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
-    
+# Function to process frame in real-time
+def process_frame(img, confidence_threshold, lighting_threshold):
     # Check lighting conditions
     if check_lighting(img, lighting_threshold):
         flag = True
     else:
         flag = False
         st.warning("Insufficient Lighting - Please Adjust")
+        return img, ""
 
     if flag:
         # Run YOLO model on the frame
         results = model(img, stream=True)
+        alert_state = False
         for r in results:
             boxes = r.boxes
             for box in boxes:
@@ -69,18 +63,39 @@ if camera_input:
                                        colorB=color)
                     res = classNames[cls].upper()
 
-                    # Update alert state based on res
+                    # Update alert state based on detection result
                     if res == 'FAKE':
                         alert_state = True
                     else:
                         alert_state = False
 
-    # Display the processed image on the Streamlit app
-    imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert to RGB
-    stframe.image(imgRGB, channels="RGB", use_column_width=True)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert to RGB for display
 
-    # Update the alert message in the fixed position
     if alert_state:
-        alert_placeholder.warning("Alert: Fake detected!")
+        return img, "Alert: Fake detected!"
     else:
-        alert_placeholder.empty()  # Clear the placeholder if no alert
+        return img, ""
+
+# Stream video frames in real-time
+camera_input = st.camera_input("Turn on the camera for real-time detection")
+
+if camera_input:
+    while True:
+        # Read the image as a numpy array for OpenCV
+        bytes_data = camera_input.getvalue()
+        img = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
+
+        # Process the frame through YOLO and update the display
+        img, alert_msg = process_frame(img, confidence_threshold, lighting_threshold)
+        
+        # Update the video frame
+        stframe.image(img, channels="RGB", use_column_width=True)
+        
+        # Update the alert message
+        if alert_msg:
+            alert_placeholder.warning(alert_msg)
+        else:
+            alert_placeholder.empty()
+
+        # Add a small delay to avoid overloading the browser
+        time.sleep(0.03)
